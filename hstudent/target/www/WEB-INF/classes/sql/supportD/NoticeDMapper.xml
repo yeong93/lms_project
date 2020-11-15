@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.kosmo.jobkorea.supportD.dao.NoticeDDao">
+
+	<!-- 공지 사항 수 구하기  -->
+	<select id="noticeTotalCnt" resultType="int">
+		select count(*) as total_cnt from 
+										( SELECT    nt_no
+											    ,   nt_title
+												,	nt_note
+												,	write_date
+												,   loginID
+											FROM	tb_notice2
+											where 1=1
+										  <if test="(title != null) and (!title.equals(''))">
+									          AND nt_title LIKE concat('%', #{title}, '%')
+									      </if>
+									     <if test="(from_date != null) and (!from_date.equals(''))">
+									          AND write_date <![CDATA[>=]]> STR_TO_DATE(#{from_date}, '%Y-%m-%d')
+									      </if>         
+									      <if test="(to_date != null) and (!to_date.equals(''))">
+									          AND write_date <![CDATA[<]]> date_add(STR_TO_DATE(#{to_date}, '%Y-%m-%d'), INTERVAL 1 DAY)
+									      </if>    
+									        )a
+		
+	</select>
+	
+	<!-- 공지 사항 리스트 뿌리기 -->
+	<select id="noticeList" resultType="kr.kosmo.jobkorea.supportD.model.NoticeDModel">
+		SELECT
+		        nt_no
+		    ,   nt_title
+			,	nt_note
+			,	write_date
+			,   loginID
+		FROM	tb_notice2
+		where 1=1
+      <if test="(title != null) and (!title.equals(''))">
+          AND nt_title LIKE concat('%', #{title}, '%')
+      </if>
+      <if test="(from_date != null) and (!from_date.equals(''))">
+          AND write_date <![CDATA[>=]]> STR_TO_DATE(#{from_date}, '%Y-%m-%d')
+      </if>         
+      <if test="(to_date != null) and (!to_date.equals(''))">
+          AND write_date <![CDATA[<]]> date_add(STR_TO_DATE(#{to_date}, '%Y-%m-%d'), INTERVAL 1 DAY)
+      </if>    
+		ORDER BY write_date DESC
+		LIMIT #{pageIndex}, #{pageSize}
+	</select>
+	
+	
+	
+	<!-- 공지사항 1건 상세정보 -->
+	<select id="detailNotice" resultType="kr.kosmo.jobkorea.supportD.model.NoticeDModel">
+		select nt_no
+			 , loginID
+			 , nt_title
+			 , nt_note
+			from tb_notice2 
+			where nt_no = #{nt_no}
+	</select>
+	
+    <!-- num 값  +1 하기 / 신규 저장시 사용 (최대 num값 구해서 더할거임) -->
+	<select id="numPlus" resultType="int">
+	 select (IFNULL(MAX(nt_no),0) + 1) as nt_no from tb_notice2
+	</select>
+	
+
+
+</mapper>

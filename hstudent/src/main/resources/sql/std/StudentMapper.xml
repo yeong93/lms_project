@@ -1,0 +1,199 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.kosmo.jobkorea.std.dao.StudentDao">
+
+	<!-- 학생 리스트 뿌리기 -->
+	<select id="liststudent" resultType="kr.kosmo.jobkorea.login.model.UserInfo">
+		select loginID
+		      ,name
+		      ,password
+		      ,age
+		      ,sex
+		      ,hp
+		      ,tel1
+		      ,tel2
+		      ,tel3
+		      ,email
+		      ,addr
+		      ,joinDate
+		      ,school
+		      ,GROUP_CONCAT(course SEPARATOR  ',') course
+		 from (     
+		      select ui.loginID
+		      		      ,ui.name
+		      		      ,ui.password
+		      		      ,ui.age
+		      		      ,ui.sex
+		      		      ,ui.hp
+		      		      ,ui.tel1
+		      		      ,ui.tel2
+		      		      ,ui.tel3
+		      		      ,ui.email
+		      		      ,ui.addr
+		      		      ,ui.joinDate
+		      		      ,ifnull(ll.name,'') as school
+		                  ,tl.title as course	
+		                  ,tl.teacher
+		      		  from tb_userinfo ui
+		      		      left outer join (  
+		      		         select sc.loginID
+		      		               ,concat(sc.name,detail_name,sc.subject) as name
+		      		           from tb_school sc, tb_detail_code dc
+		      		          where sc.infotype = dc.detail_code
+		      		            and dc.group_code = 'school' 
+		      		            and sc.seq =( select ifnull(max(sc2.seq),0) from tb_school sc2 where sc2.loginID = sc.loginID )
+		      		       ) ll  on ll.loginID = ui.loginID
+		                 left outer join (
+		                             select tc.loginID
+		                                   ,tc.no
+		                                   ,lc.teacher
+		                                   ,lc.title
+		                               from tb_tcourse tc,tb_lecture lc
+		                              where tc.no = lc.no
+		                 ) tl on tl.loginID = ui.loginID
+		       where ui.user_type = 'D' 			
+		       <if test="(searchKey != null) and (!searchKey.equals(''))">
+				<choose>
+					<when
+						test="(searchKey != null) and (searchKey eq 'lec_nm'.toString())">
+						and tl.title Like CONCAT('%', #{searchWord}, '%')
+					</when>
+					<when
+						test="(searchKey != null) and (searchKey eq 'stuent_nm'.toString())">
+						and ui.name LIKE CONCAT('%', #{searchWord}, '%')
+					</when>
+				</choose>
+			  </if>
+		      ) ls
+		group by loginID
+		      ,name
+		      ,password
+		      ,age
+		      ,sex
+		      ,hp
+		      ,tel1
+		      ,tel2
+		      ,tel3
+		      ,email
+		      ,addr
+		      ,joinDate
+		      ,school
+		ORDER BY name
+		LIMIT #{pageIndex}, #{pageSize}
+	</select>
+
+	<!-- 학생 수 구하기 -->
+	<select id="countListstudent" resultType="int">
+		select count(*) as total_cnt
+		from (
+		          select loginID
+		          		      ,name
+		          		      ,password
+		          		      ,age
+		          		      ,sex
+		          		      ,hp
+		          		      ,tel1
+		          		      ,tel2
+		          		      ,tel3
+		          		      ,email
+		          		      ,addr
+		          		      ,joinDate
+		          		      ,school
+		          		      ,GROUP_CONCAT(course SEPARATOR  ',') course
+		          		 from (     
+		          		      select ui.loginID
+		          		      		      ,ui.name
+		          		      		      ,ui.password
+		          		      		      ,ui.age
+		          		      		      ,ui.sex
+		          		      		      ,ui.hp
+		          		      		      ,ui.tel1
+		          		      		      ,ui.tel2
+		          		      		      ,ui.tel3
+		          		      		      ,ui.email
+		          		      		      ,ui.addr
+		          		      		      ,ui.joinDate
+		          		      		      ,ifnull(ll.name,'') as school
+		          		                  ,tl.title as course	
+		          		                  ,tl.teacher
+		          		      		  from tb_userinfo ui
+		          		      		      left outer join (  
+		          		      		         select sc.loginID
+		          		      		               ,concat(sc.name,detail_name,sc.subject) as name
+		          		      		           from tb_school sc, tb_detail_code dc
+		          		      		          where sc.infotype = dc.detail_code
+		          		      		            and dc.group_code = 'school' 
+		          		      		            and sc.seq =( select ifnull(max(sc2.seq),0) from tb_school sc2 where sc2.loginID = sc.loginID )
+		          		      		       ) ll  on ll.loginID = ui.loginID
+		          		                 left outer join (
+		          		                             select tc.loginID
+		          		                                   ,tc.no
+		          		                                   ,lc.teacher
+		          		                                   ,lc.title
+		          		                               from tb_tcourse tc,tb_lecture lc
+		          		                              where tc.no = lc.no
+		          		                 ) tl on tl.loginID = ui.loginID
+		          		       where ui.user_type = 'D'
+							       <if test="(searchKey != null) and (!searchKey.equals(''))">
+									<choose>
+										<when
+											test="(searchKey != null) and (searchKey eq 'lec_nm'.toString())">
+											and tl.title Like CONCAT('%', #{searchWord}, '%')
+										</when>
+										<when
+											test="(searchKey != null) and (searchKey eq 'stuent_nm'.toString())">
+											and ui.name LIKE CONCAT('%', #{searchWord}, '%')
+										</when>
+									</choose>
+								  </if>
+		          		      ) ls
+		          		group by loginID
+		          		      ,name
+		          		      ,password
+		          		      ,age
+		          		      ,sex
+		          		      ,hp
+		          		      ,tel1
+		          		      ,tel2
+		          		      ,tel3
+		          		      ,email
+		          		      ,addr
+		          		      ,joinDate
+		          		      ,school
+		   ) lc
+	</select>
+	
+	<!-- 학생 한건 조회 -->
+	<select id="selectstudent" resultType="kr.kosmo.jobkorea.login.model.UserInfo">
+ 		   select ui.loginID
+ 		      	 ,ui.name
+ 		      	 ,ui.password
+ 		      	 ,ui.age
+ 		      	 ,ui.sex
+ 		      	 ,ui.hp
+ 		      	 ,ui.tel1
+ 		      	 ,ui.tel2
+ 		      	 ,ui.tel3
+ 		      	 ,ui.email
+ 		      	 ,ui.zipcd
+ 		      	 ,ui.addr
+ 		      	 ,ui.dtladdr
+ 		      	 ,ui.joinDate
+ 		      	 ,ifnull(ll.name,'') as school
+	      	from tb_userinfo ui
+	      		 left outer join (  
+				      		         select sc.loginID						
+				      		               ,concat(sc.name,detail_name,sc.subject) as name
+				      		           from tb_school sc, tb_detail_code dc
+				      		          where sc.infotype = dc.detail_code
+				      		            and dc.group_code = 'school' 
+				      		            and sc.seq =( select ifnull(max(sc2.seq),0) from tb_school sc2 where sc2.loginID = sc.loginID )	
+	      		                 ) ll  on ll.loginID = ui.loginID
+ 		   where ui.user_type = 'D'
+ 		    and ui.loginID = #{loginid}
+	</select>	
+	
+	
+	
+</mapper>

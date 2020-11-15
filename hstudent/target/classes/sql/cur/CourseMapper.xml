@@ -1,0 +1,217 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.kosmo.jobkorea.cur.dao.CourseDao">
+
+	<!-- 과정 리스트 뿌리기 -->
+	<select id="listCourse" resultType="kr.kosmo.jobkorea.cur.model.CourseModel">
+		SELECT l.no
+              ,l.title
+              ,l.category
+              ,l.teacher
+              ,l.room
+              ,l.goal
+              ,l.plan
+              ,DATE_FORMAT(l.startdate, '%Y.%m.%d') as startdate
+              ,DATE_FORMAT(l.enddate, '%Y.%m.%d') as enddate
+              ,l.pcnt
+              ,(select count(*) from tb_tcourse t where  t.no = l.no) as scnt
+		FROM tb_lecture l
+		<where>
+			<if test="(searchKey != null) and (!searchKey.equals(''))">
+				<choose>
+					<when
+						test="(searchKey != null) and (searchKey eq 'lec_nm'.toString())">
+						and l.title Like CONCAT('%', #{searchWord}, '%')
+					</when>
+					<when
+						test="(searchKey != null) and (searchKey eq 'teacher_nm'.toString())">
+						and l.teacher LIKE CONCAT('%', #{searchWord}, '%')
+					</when>
+				</choose>
+			</if>
+		</where>
+		ORDER BY l.no DESC
+		LIMIT #{pageIndex}, #{pageSize}
+	</select>
+
+	<!-- 과정 수 구하기 -->
+	<select id="countListCourse" resultType="int">
+		select count(*) as total_cnt
+		  from tb_lecture
+		<where>
+			<if test="(searchKey != null) and (!searchKey.equals(''))">
+				<choose>
+					<when
+						test="(searchKey != null) and (searchKey eq 'lec_nm'.toString())">
+						and title Like CONCAT('%', #{searchWord}, '%')
+					</when>
+					<when
+						test="(searchKey != null) and (searchKey eq 'teacher_nm'.toString())">
+						and teacher LIKE CONCAT('%', #{searchWord}, '%')
+					</when>
+				</choose>
+			</if>
+		</where>
+	</select>
+
+
+	<!-- 학생 리스트 뿌리기 -->
+	<select id="liststudent" resultType="kr.kosmo.jobkorea.login.model.UserInfo">
+		select tc.loginID
+		      ,ui.name
+		      ,ui.sex
+		      ,ui.age
+		      ,ifnull(ll.name,'') as school
+		  from tb_tcourse tc, tb_userinfo ui
+		      left outer join (  
+		         select sc.loginID
+		               ,concat(sc.name,detail_name,sc.subject) as name
+		           from tb_school sc, tb_detail_code dc
+		          where sc.infotype = dc.detail_code
+		            and dc.group_code = 'school' 
+		            and sc.seq =( select ifnull(max(sc2.seq),0) from tb_school sc2 where sc2.loginID = sc.loginID )
+		       ) ll  on ll.loginID = ui.loginID
+		 where tc.loginID = ui.loginID
+		   and tc.no = #{no}
+		ORDER BY ui.name
+		LIMIT #{pageIndex}, #{pageSize}
+	</select>
+
+	<!-- 학생 수 구하기 -->
+	<select id="countListstudent" resultType="int">
+		select count(*) as total_cnt
+		  from tb_tcourse tc, tb_userinfo ui
+		      left outer join (  
+		         select sc.loginID
+		               ,concat(sc.name,detail_name,sc.subject) as name
+		           from tb_school sc, tb_detail_code dc
+		          where sc.infotype = dc.detail_code
+		            and dc.group_code = 'school' 
+		            and sc.seq =( select ifnull(max(sc2.seq),0) from tb_school sc2 where sc2.loginID = sc.loginID )
+		       ) ll  on ll.loginID = ui.loginID
+		 where tc.loginID = ui.loginID
+		   and tc.no = #{no}
+	</select>
+	
+	<!-- 미수강 학생 리스트 뿌리기 -->
+	<select id="listunstudent" resultType="kr.kosmo.jobkorea.login.model.UserInfo">
+		select ui.loginID
+		      ,ui.name
+		      ,ui.sex
+		      ,ui.age
+		      ,ifnull(ll.name,'') as school
+		  from tb_userinfo ui
+               left outer join (  
+		         select sc.loginID
+		               ,concat(sc.name,detail_name,sc.subject) as name
+		           from tb_school sc, tb_detail_code dc
+		          where sc.infotype = dc.detail_code
+		            and dc.group_code = 'school' 
+		            and sc.seq =( select ifnull(max(sc2.seq),0) from tb_school sc2 where sc2.loginID = sc.loginID )
+		       ) ll  on ll.loginID = ui.loginID	
+        where ui.loginID not in (
+                                select tc.loginID
+                                  from tb_tcourse tc
+                                 where tc.no = #{no}
+                                )
+		ORDER BY ui.name
+		LIMIT #{pageIndex}, #{pageSize}
+	</select>
+
+	<!-- 미수강 학생 수 구하기 -->
+	<select id="countListunstudent" resultType="int">
+		select count(*) as total_cnt
+		  from tb_userinfo ui
+               left outer join (  
+		         select sc.loginID
+		               ,concat(sc.name,detail_name,sc.subject) as name
+		           from tb_school sc, tb_detail_code dc
+		          where sc.infotype = dc.detail_code
+		            and dc.group_code = 'school' 
+		            and sc.seq =( select ifnull(max(sc2.seq),0) from tb_school sc2 where sc2.loginID = sc.loginID )
+		       ) ll  on ll.loginID = ui.loginID	
+        where ui.loginID not in (
+                                select tc.loginID
+                                  from tb_tcourse tc
+                                 where tc.no = #{no}
+                                )
+	</select>	
+	
+	
+
+    <!-- 과정 단건 조화 -->
+	<select id="selectcourse" resultType="kr.kosmo.jobkorea.cur.model.CourseModel">
+		SELECT l.no
+              ,l.title
+              ,l.category
+              ,l.teacher
+              ,l.room
+              ,l.goal
+              ,l.plan
+              ,DATE_FORMAT(l.startdate, '%Y.%m.%d') as startdate
+              ,DATE_FORMAT(l.enddate, '%Y.%m.%d') as enddate
+              ,l.pcnt
+              ,(select count(*) from tb_tcourse t where t.no = l.no) as scnt
+		FROM tb_lecture l
+	   WHERE l.no = #{no}
+	</select>
+	
+    <!-- 과정 Insert -->
+	<insert id="insertCourse">
+        <selectKey resultType="string" keyProperty="no" order="BEFORE">
+            SELECT IFNULL(MAX(CAST(no AS UNSIGNED)),0) + 1 FROM tb_lecture 
+        </selectKey> 
+	    insert into tb_lecture(
+	                no 
+                   ,title 
+                   ,teacher 
+                   ,room 
+                   ,startdate 
+                   ,enddate 
+	    ) values (
+	                #{no}
+	               ,#{title}
+	               ,#{teacher}	    
+	               ,#{room}
+	               ,#{startdate}	               
+	               ,#{enddate}	               	    
+	    )
+	</insert>
+	
+    <!-- 과정 Update -->
+	<update id="updateCourse">
+	    update tb_lecture
+	       set title = #{title}
+              ,teacher = #{teacher}
+              ,room = #{room} 
+              ,startdate = #{startdate} 
+              ,enddate = #{enddate} 
+	     where no = #{no}
+	</update>	 
+	
+    <!-- 과정 delete -->
+	<delete id="coursedel">
+	    delete from tb_lecture
+	     where no = #{no}	
+	</delete>
+	
+    <!-- 학생 추가 -->
+	<insert id="addstudent">
+	    insert into tb_tcourse(
+	                no 
+                   ,loginID
+	    ) values (
+	                #{no}
+	               ,#{loginid}              	    
+	    )
+	</insert>
+	
+    <!-- 수강 취소 -->
+	<delete id="delstudent">
+	    delete from tb_tcourse
+	     where no = #{no}	
+	       and loginID = #{loginid}
+	</delete>	
+	
+</mapper>
